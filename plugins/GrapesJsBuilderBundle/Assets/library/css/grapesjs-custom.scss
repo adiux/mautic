@@ -3,8 +3,8 @@ $secondaryColor: #ddd;
 $tertiaryColor: #804f7b;
 $quaternaryColor: #d278c9;
 
-// Parcel workaround: https://github.com/parcel-bundler/parcel/issues/39
-@import url(node_modules/grapesjs/src/styles/scss/main.scss);
+@import 'grapesjs/src/styles/scss/main';
+@import 'grapesjs-preset-newsletter/src/style/main';
 
 body,
 html {
