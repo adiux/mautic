@@ -3,20 +3,23 @@ import grapesjsmjml from 'grapesjs-mjml';
 import grapesjsnewsletter from 'grapesjs-preset-newsletter';
 import grapesjswebpage from 'grapesjs-preset-webpage';
 import grapesjspostcss from 'grapesjs-parser-postcss';
-import contentService from 'grapesjs-preset-mautic/dist/content.service';
-import grapesjsmautic from 'grapesjs-preset-mautic';
-import mjmlService from 'grapesjs-preset-mautic/dist/mjml/mjml.service';
+// import contentService from 'grapesjs-preset-mautic/src/content.service';
+// import grapesjsmautic from 'grapesjs-preset-mautic';
+// import mjmlService from 'grapesjs-preset-mautic/src/mjml/mjml.service';
 import 'grapesjs-plugin-ckeditor';
 
 // for local dev
-// import contentService from '../../../../../../grapesjs-preset-mautic/src/content.service';
-// import grapesjsmautic from '../../../../../../grapesjs-preset-mautic/src';
-// import mjmlService from '../../../../../../grapesjs-preset-mautic/src/mjml/mjml.service';
+import contentService from '../../../../../../grapesjs-preset-mautic/src/content.service';
+import grapesjsmautic from '../../../../../../grapesjs-preset-mautic/src';
+import mjmlService from '../../../../../../grapesjs-preset-mautic/src/mjml/mjml.service';
 
 import CodeModeButton from './codeMode/codeMode.button';
+import ContentService from 'grapesjs-preset-mautic/dist/content.service';
+import Logger from 'grapesjs-preset-mautic/dist/logger';
+
 
 export default class BuilderService {
-  editor;
+  #editor;
 
   assets;
 
@@ -25,10 +28,11 @@ export default class BuilderService {
   deletePath;
 
   /**
-   * @param {*} assets
+   * @param {Editor} editor GrapesJS Editor
+   * @param {Object} assets GrapesJS Asset Config Object
    */
-  constructor(assets) {
-    if (!assets.conf.uploadPath) {
+  constructor(editor, assets) {
+    if (!assets.conf || !assets.conf.uploadPath) {
       throw Error('No uploadPath found');
     }
     if (!assets.conf.deletePath) {
@@ -38,6 +42,10 @@ export default class BuilderService {
       console.warn('no assets');
     }
 
+    if (editor) {
+      this.setEditor(editor);
+    }
+    
     this.assets = assets.files;
     this.uploadPath = assets.conf.uploadPath;
     this.deletePath = assets.conf.deletePath;
@@ -49,9 +57,10 @@ export default class BuilderService {
    * @param object
    */
   setListeners() {
-    if (!this.editor) {
+    if (!this.getEditor()) {
       throw Error('No editor found');
     }
+    const editor = this.getEditor();
 
     // Why would we not want to keep the history?
     //
@@ -61,10 +70,10 @@ export default class BuilderService {
     //   um.clear();
     // });
 
-    const keymaps = this.editor.Keymaps;
+    const keymaps = this.getEditor().Keymaps;
     let allKeymaps;
 
-    this.editor.on('modal:open', () => {
+    editor.on('modal:open', () => {
       // Save all keyboard shortcuts
       allKeymaps = { ...keymaps.getAll() };
 
@@ -72,7 +81,7 @@ export default class BuilderService {
       keymaps.removeAll();
     });
 
-    this.editor.on('modal:close', () => {
+    editor.on('modal:close', () => {
       // ReMap keyboard shortcuts on modal close
       Object.keys(allKeymaps).map((objectKey) => {
         const shortcut = allKeymaps[objectKey];
@@ -82,7 +91,7 @@ export default class BuilderService {
       });
     });
 
-    this.editor.on('asset:remove', (response) => {
+    editor.on('asset:remove', (response) => {
       // Delete file on server
       mQuery.ajax({
         url: this.deletePath,
@@ -94,29 +103,52 @@ export default class BuilderService {
   /**
    * Initialize the grapesjs build in the
    * correct mode
+   * @returns GrapesJsBuilder
    */
-  initGrapesJS(object) {
-    // disable mautic global shortcuts
-    Mousetrap.reset();
-    if (object === 'page') {
-      this.editor = this.initPage();
-    } else if (object === 'emailform') {
-      if (mjmlService.getOriginalContentMjml()) {
-        this.editor = this.initEmailMjml();
-      } else {
-        this.editor = this.initEmailHtml();
-      }
-    } else {
-      throw Error(`Not supported builder type: ${object}`);
-    }
+  initGrapesJS(type) {
+    let editor
 
-    // add code mode button
-    // @todo: only show button if configured: sourceEdit: 1,
-    const codeModeButton = new CodeModeButton(this.editor);
-    codeModeButton.addCommand();
-    codeModeButton.addButton();
+    // is there an existing editor in the correct mode?
+    if (this.getEditor() && BuilderService.getRequestedMode(type) === ContentService.getMode(this.getEditor())) {
+      this.logger = new Logger(this.getEditor());
+      this.logger.debug('Using the existing editor', {mode: ContentService.getMode(this.getEditor())})
+      return this.getEditor();
+    }
+    // initialize the editor in the correct mode
+    if (ContentService.modePageHtml === BuilderService.getRequestedMode(type)) {
+      editor = this.initPage();
+    } else if (ContentService.modeEmailMjml === BuilderService.getRequestedMode(type)) {
+      editor = this.initEmailMjml();
+    } else if (ContentService.modeEmailHtml === BuilderService.getRequestedMode(type)) {
+      editor = this.initEmailHtml();
+    }
+    this.setEditor(editor);
+    this.addCodeModeButton();
 
     this.setListeners();
+
+    return this.getEditor();
+  }
+
+  /**
+   * Check if the editor needs to be in MJML mode
+   * @returns boolean
+   */
+  static isMjmlModeRequested() {
+    return mjmlService.getOriginalContentMjml().length > 0;
+  }
+  static getRequestedMode(type) {
+    if (type === 'page') {
+      return ContentService.modePageHtml;
+    } else if (type === 'emailform') {
+      if (BuilderService.isMjmlModeRequested()) {
+        return ContentService.modeEmailMjml;
+      } else {
+        return ContentService.modeEmailHtml;
+      }
+    } else {
+      throw Error(`Not supported builder type: ${type}`);
+    }
   }
 
   static getMauticConf(mode) {
@@ -124,6 +156,17 @@ export default class BuilderService {
       mode,
     };
   }
+
+  /**
+   * Add the code mode button
+   * @todo: only show button if configured: sourceEdit: 1,
+   */
+  addCodeModeButton() {
+    const codeModeButton = new CodeModeButton(this.getEditor());
+    codeModeButton.addCommand();
+    codeModeButton.addButton();
+  }
+
 
   static getCkeConf() {
     return {
@@ -147,10 +190,9 @@ export default class BuilderService {
    */
   initPage() {
     // Launch GrapesJS with body part
-    this.editor = grapesjs.init({
+    return grapesjs.init({
       clearOnRender: true,
       container: '.builder-panel',
-      components: contentService.getOriginalContentHtml().body.innerHTML,
       height: '100%',
       canvas: {
         styles: contentService.getStyles(),
@@ -169,19 +211,13 @@ export default class BuilderService {
         'gjs-plugin-ckeditor': BuilderService.getCkeConf(),
       },
     });
-
-    return this.editor;
   }
 
   initEmailMjml() {
-    const components = mjmlService.getOriginalContentMjml();
-    // validate
-    mjmlService.mjmlToHtml(components);
 
-    this.editor = grapesjs.init({
+    const editor = grapesjs.init({
       clearOnRender: true,
       container: '.builder-panel',
-      components,
       height: '100%',
       storageManager: false,
       assetManager: this.getAssetManagerConf(),
@@ -193,24 +229,19 @@ export default class BuilderService {
       },
     });
 
-    this.editor.BlockManager.get('mj-button').set({
+    editor.BlockManager.get('mj-button').set({
       content: '<mj-button href="https://">Button</mj-button>',
     });
 
-    return this.editor;
+    return editor;
   }
 
   initEmailHtml() {
-    const components = contentService.getOriginalContentHtml().body.innerHTML;
-    if (!components) {
-      throw new Error('no components');
-    }
 
     // Launch GrapesJS with body part
-    this.editor = grapesjs.init({
+    const editor = grapesjs.init({
       clearOnRender: true,
       container: '.builder-panel',
-      components,
       height: '100%',
       storageManager: false,
       assetManager: this.getAssetManagerConf(),
@@ -223,14 +254,14 @@ export default class BuilderService {
     });
 
     // add a Mautic custom block Button
-    this.editor.BlockManager.get('button').set({
+    editor.BlockManager.get('button').set({
       content:
         '<a href="#" target="_blank" style="display:inline-block;text-decoration:none;border-color:#4e5d9d;border-width: 10px 20px;border-style:solid; text-decoration: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px; background-color: #4e5d9d; display: inline-block;font-size: 16px; color: #ffffff; ">\n' +
         'Button\n' +
         '</a>',
     });
 
-    return this.editor;
+    return editor;
   }
 
   /**
@@ -272,9 +303,17 @@ export default class BuilderService {
     };
   }
 
-  getEditor() {
-    return this.editor;
+  getEditor(){
+    return this.#editor;
   }
+  setEditor(editor){
+    if (!editor) {
+      throw new Error('no editor');
+    }
+    console.warn('setting the editor',{ editor });
+    this.#editor = editor;
+  }
+
   /**
    * Generate assets list from GrapesJs
    */

@@ -8,6 +8,8 @@ import 'grapesjs/dist/css/grapes.min.css';
 // import 'grapesjs-preset-webpage/dist/grapesjs-preset-webpage.min.css';
 import 'grapesjs-preset-newsletter/dist/grapesjs-preset-newsletter.css';
 import './grapesjs-custom.css';
+import ContentService from 'grapesjs-preset-mautic/dist/content.service';
+import MjmlService from 'grapesjs-preset-mautic/dist/mjml/mjml.service';
 
 /**
  * Launch builder
@@ -17,10 +19,7 @@ import './grapesjs-custom.css';
  */
 function launchBuilderGrapesjs(formName) {
   const assets = AssetService.getAssets();
-
-  const builder = new BuilderService(assets);
-
-  Mautic.showChangeThemeWarning = true;
+  const builderService = new BuilderService(Mautic.builder, assets);
 
   // Prepare HTML
   mQuery('html').css('font-size', '100%');
@@ -29,8 +28,37 @@ function launchBuilderGrapesjs(formName) {
   mQuery('.builder-panel').css('display', 'block');
   mQuery('.builder').addClass('builder-active').removeClass('hide');
 
-  // Initialize GrapesJS
-  builder.initGrapesJS(formName);
+  // disable mautic global shortcuts
+  Mousetrap.reset();
+
+  // Initialize GrapesJS and make it available in the Mautic scope
+  // so it can be accessed by 3rd party plugins as requested
+  // by the community. Should not be used from the Mautic project.
+  Mautic.builder = builderService.initGrapesJS(formName);
+
+  // const contentService = new ContentService();
+  const isMjmlMode = ContentService.isMjmlMode(Mautic.builder);
+  const components = getComponents(isMjmlMode);
+  Mautic.builder.setComponents(components);
+  
+  Mautic.showChangeThemeWarning = true;
+}
+
+function getComponents(isMjmlMode) {
+  let components = '';
+
+  if (isMjmlMode) {
+    components = MjmlService.getOriginalContentMjml();
+    // validate
+    MjmlService.mjmlToHtml(components);
+  } else {
+    //html page and email html
+    components = ContentService.getOriginalContentHtml().body.innerHTML;
+  }
+  if (components.length <= 0) {
+    throw new Error('No components found');
+  }
+  return components;
 }
 
 /**
