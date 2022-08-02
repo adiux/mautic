@@ -3,15 +3,15 @@ import grapesjsmjml from 'grapesjs-mjml';
 import grapesjsnewsletter from 'grapesjs-preset-newsletter';
 import grapesjswebpage from 'grapesjs-preset-webpage';
 import grapesjspostcss from 'grapesjs-parser-postcss';
-// import contentService from 'grapesjs-preset-mautic/src/content.service';
-// import grapesjsmautic from 'grapesjs-preset-mautic';
-// import mjmlService from 'grapesjs-preset-mautic/src/mjml/mjml.service';
+import contentService from 'grapesjs-preset-mautic/src/content.service';
+import grapesjsmautic from 'grapesjs-preset-mautic';
+import mjmlService from 'grapesjs-preset-mautic/src/mjml/mjml.service';
 import 'grapesjs-plugin-ckeditor';
 
 // for local dev
-import contentService from '../../../../../../grapesjs-preset-mautic/src/content.service';
-import grapesjsmautic from '../../../../../../grapesjs-preset-mautic/src';
-import mjmlService from '../../../../../../grapesjs-preset-mautic/src/mjml/mjml.service';
+// import contentService from '../../../../../../grapesjs-preset-mautic/src/content.service';
+// import grapesjsmautic from '../../../../../../grapesjs-preset-mautic/src';
+// import mjmlService from '../../../../../../grapesjs-preset-mautic/src/mjml/mjml.service';
 
 import CodeModeButton from './codeMode/codeMode.button';
 import ContentService from 'grapesjs-preset-mautic/dist/content.service';
@@ -61,7 +61,6 @@ export default class BuilderService {
       throw Error('No editor found');
     }
     const editor = this.getEditor();
-
     // Why would we not want to keep the history?
     //
     // this.editor.on('load', () => {
@@ -109,11 +108,14 @@ export default class BuilderService {
     let editor
 
     // is there an existing editor in the correct mode?
-    if (this.getEditor() && BuilderService.getRequestedMode(type) === ContentService.getMode(this.getEditor())) {
-      this.logger = new Logger(this.getEditor());
-      this.logger.debug('Using the existing editor', {mode: ContentService.getMode(this.getEditor())})
-      return this.getEditor();
-    }
+    
+    // dont check for editor, check for the html structure: is `.gjs-editor` existing. The "save email" ajax request removes the editor.
+
+    // if (this.getEditor() && BuilderService.getRequestedMode(type) === ContentService.getMode(this.getEditor())) {
+    //   this.logger = new Logger(this.getEditor());
+    //   this.logger.debug('Using the existing editor', {mode: ContentService.getMode(this.getEditor())})
+    //   return this.getEditor();
+    // }
     // initialize the editor in the correct mode
     if (ContentService.modePageHtml === BuilderService.getRequestedMode(type)) {
       editor = this.initPage();

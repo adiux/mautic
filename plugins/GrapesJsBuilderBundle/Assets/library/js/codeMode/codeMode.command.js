@@ -16,12 +16,8 @@ export default class CodeModeCommand {
 
     const logger = new Logger(editor);
 
-    if (!CodeModeCommand.codeEditor) {
-      CodeModeCommand.codeEditor = new CodeEditor(editor, opts);
+    CodeModeCommand.codeEditor = new CodeEditor(editor, opts);
       logger.debug('New CodeEditor created', CodeModeCommand.codeEditor);
-    }else{
-      logger.debug('Using existing CodeEditor', CodeModeCommand.codeEditor);
-    }
 
     if (sender) {
       sender.set('active', 0);
