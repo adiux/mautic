@@ -19,7 +19,7 @@ import MjmlService from 'grapesjs-preset-mautic/dist/mjml/mjml.service';
  */
 function launchBuilderGrapesjs(formName) {
   const assets = AssetService.getAssets();
-  const builderService = new BuilderService(Mautic.builder, assets);
+  const builderService = new BuilderService(assets); 
 
   // Prepare HTML
   mQuery('html').css('font-size', '100%');
@@ -31,15 +31,21 @@ function launchBuilderGrapesjs(formName) {
   // disable mautic global shortcuts
   Mousetrap.reset();
 
+  // if there is an existing builder, use it (e.g. for history)
+  if (Mautic && Mautic.builder) {
+    builderService.setEditor(Mautic.builder);
+  }
+
   // Initialize GrapesJS and make it available in the Mautic scope
   // so it can be accessed by 3rd party plugins as requested
   // by the community. Should not be used from the Mautic project.
-  Mautic.builder = builderService.initGrapesJS(formName);
+  builderService.initGrapesJS(formName);
+  // Mautic.builder = builderService.initGrapesJS(formName);
 
   // const contentService = new ContentService();
-  const isMjmlMode = ContentService.isMjmlMode(Mautic.builder);
-  const components = getComponents(isMjmlMode);
-  Mautic.builder.setComponents(components);
+  // const isMjmlMode = ContentService.isMjmlMode(Mautic.builder);
+  // const components = getComponents(isMjmlMode);
+  // Mautic.builder.setComponents(components);
   
   Mautic.showChangeThemeWarning = true;
 }

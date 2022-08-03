@@ -19,36 +19,34 @@ import Logger from 'grapesjs-preset-mautic/dist/logger';
 
 
 export default class BuilderService {
+  static CONTAINER_CLASS = 'builder-panel';
+  static GJS_EDITOR_CLASS = 'gjs-editor';
+
   #editor;
 
-  assets;
+  #assets;
 
-  uploadPath;
+  #uploadPath;
 
-  deletePath;
+  #deletePath;
 
   /**
    * @param {Editor} editor GrapesJS Editor
-   * @param {Object} assets GrapesJS Asset Config Object
+   * @param {Object} assetsConf GrapesJS Asset Config Object
    */
-  constructor(editor, assets) {
-    if (!assets.conf || !assets.conf.uploadPath) {
+  constructor(assetsConf) {
+    if (!assetsConf.conf || !assetsConf.conf.uploadPath) {
       throw Error('No uploadPath found');
     }
-    if (!assets.conf.deletePath) {
+    if (!assetsConf.conf.deletePath) {
       throw Error('No deletePath found');
     }
-    if (!assets.files || !assets.files[0]) {
-      console.warn('no assets');
+    if (!assetsConf.files || !assetsConf.files[0]) {
+      console.debug('No assets found');
     }
-
-    if (editor) {
-      this.setEditor(editor);
-    }
-    
-    this.assets = assets.files;
-    this.uploadPath = assets.conf.uploadPath;
-    this.deletePath = assets.conf.deletePath;
+    this.setAssets(assetsConf.files);
+    this.setUploadPath(assetsConf.conf.uploadPath);
+    this.setDeletePath(assetsConf.conf.deletePath);
   }
 
   /**
@@ -61,15 +59,8 @@ export default class BuilderService {
       throw Error('No editor found');
     }
     const editor = this.getEditor();
-    // Why would we not want to keep the history?
-    //
-    // this.editor.on('load', () => {
-    //   const um = this.editor.UndoManager;
-    //   // Clear stack of undo/redo
-    //   um.clear();
-    // });
 
-    const keymaps = this.getEditor().Keymaps;
+    const keymaps = editor.Keymaps;
     let allKeymaps;
 
     editor.on('modal:open', () => {
@@ -105,17 +96,15 @@ export default class BuilderService {
    * @returns GrapesJsBuilder
    */
   initGrapesJS(type) {
-    let editor
-
     // is there an existing editor in the correct mode?
-    
-    // dont check for editor, check for the html structure: is `.gjs-editor` existing. The "save email" ajax request removes the editor.
+    if (this.isValidEditor(type)) {
+      this.logger = new Logger(this.getEditor());
+      this.logger.debug('Using the existing editor', { mode: ContentService.getMode(this.getEditor()) })
+      return this.getEditor();
+    }
 
-    // if (this.getEditor() && BuilderService.getRequestedMode(type) === ContentService.getMode(this.getEditor())) {
-    //   this.logger = new Logger(this.getEditor());
-    //   this.logger.debug('Using the existing editor', {mode: ContentService.getMode(this.getEditor())})
-    //   return this.getEditor();
-    // }
+    let editor;
+
     // initialize the editor in the correct mode
     if (ContentService.modePageHtml === BuilderService.getRequestedMode(type)) {
       editor = this.initPage();
@@ -130,6 +119,17 @@ export default class BuilderService {
     this.setListeners();
 
     return this.getEditor();
+  }
+
+  /**
+   * It is not enough to check the editor parameter.
+   * Mautic can remove the editor from the dome e.g. on save
+   * We need to check for the necessary html compoents to be present.
+   */
+  isValidEditor(type) {
+    return this.getEditor() &&
+      document.getElementsByClassName(BuilderService.GJS_EDITOR_CLASS).length > 0 &&
+      BuilderService.getRequestedMode(type) === ContentService.getMode(this.getEditor())
   }
 
   /**
@@ -194,7 +194,7 @@ export default class BuilderService {
     // Launch GrapesJS with body part
     return grapesjs.init({
       clearOnRender: true,
-      container: '.builder-panel',
+      container: `.${BuilderService.CONTAINER_CLASS}`,
       height: '100%',
       canvas: {
         styles: contentService.getStyles(),
@@ -219,7 +219,7 @@ export default class BuilderService {
 
     const editor = grapesjs.init({
       clearOnRender: true,
-      container: '.builder-panel',
+      container: `.${BuilderService.CONTAINER_CLASS}`,
       height: '100%',
       storageManager: false,
       assetManager: this.getAssetManagerConf(),
@@ -243,7 +243,7 @@ export default class BuilderService {
     // Launch GrapesJS with body part
     const editor = grapesjs.init({
       clearOnRender: true,
-      container: '.builder-panel',
+      container: `.${BuilderService.CONTAINER_CLASS}`,
       height: '100%',
       storageManager: false,
       assetManager: this.getAssetManagerConf(),
@@ -293,9 +293,9 @@ export default class BuilderService {
    */
   getAssetManagerConf() {
     return {
-      assets: this.assets,
+      assets: this.getAssets(),
       noAssets: Mautic.translate('grapesjsbuilder.assetManager.noAssets'),
-      upload: this.uploadPath,
+      upload: this.getUploadPath(),
       uploadName: 'files',
       multiUpload: 1,
       embedAsBase64: false,
@@ -305,37 +305,31 @@ export default class BuilderService {
     };
   }
 
-  getEditor(){
+  getEditor() {
     return this.#editor;
   }
-  setEditor(editor){
+  setEditor(editor) {
     if (!editor) {
       throw new Error('no editor');
     }
-    console.warn('setting the editor',{ editor });
     this.#editor = editor;
   }
-
-  /**
-   * Generate assets list from GrapesJs
-   */
-  // getAssetsList() {
-  //   const assetManager = this.editor.AssetManager;
-  //   const assets = assetManager.getAll();
-  //   const assetsList = [];
-
-  //   assets.forEach((asset) => {
-  //     if (asset.get('type') === 'image') {
-  //       assetsList.push({
-  //         src: asset.get('src'),
-  //         width: asset.get('width'),
-  //         height: asset.get('height'),
-  //       });
-  //     } else {
-  //       assetsList.push(asset.get('src'));
-  //     }
-  //   });
-
-  //   return assetsList;
-  // }
+  getAssets() {
+    return this.#assets;
+  }
+  setAssets(assets) {
+    this.#assets = assets;
+  }
+  getUploadPath() {
+    return this.#uploadPath;
+  }
+  setUploadPath(uploadPath) {
+    this.#uploadPath = uploadPath;
+  }
+  getDeletePath() {
+    return this.#deletePath;
+  }
+  setDeletePath(deletePath) {
+    this.#deletePath = deletePath;
+  }
 }

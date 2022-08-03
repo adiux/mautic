@@ -30,7 +30,6 @@ class CodeEditor {
     if (!editor) {
       throw new Error('no editor');
     }
-    console.warn('setting the editor for code editor',{ editor });
     this.#editor = editor;
   }
 
