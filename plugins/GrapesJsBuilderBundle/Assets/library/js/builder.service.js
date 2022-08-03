@@ -96,14 +96,14 @@ export default class BuilderService {
    * @returns GrapesJsBuilder
    */
   initGrapesJS(type) {
+    let editor;
+
     // is there an existing editor in the correct mode?
     if (this.isValidEditor(type)) {
       this.logger = new Logger(this.getEditor());
       this.logger.debug('Using the existing editor', { mode: ContentService.getMode(this.getEditor()) })
       return this.getEditor();
     }
-
-    let editor;
 
     // initialize the editor in the correct mode
     if (ContentService.modePageHtml === BuilderService.getRequestedMode(type)) {
@@ -303,6 +303,26 @@ export default class BuilderService {
       autoAdd: 1,
       headers: { 'X-CSRF-Token': mauticAjaxCsrf }, // global variable
     };
+  }
+
+  /**
+   * Get the components currently on the canvas 
+   */
+  getComponents(isMjmlMode) {
+    let components = '';
+
+    if (isMjmlMode) {
+      components = mjmlService.getOriginalContentMjml();
+      // validate
+      mjmlService.mjmlToHtml(components);
+    } else {
+      //html page and email html
+      components = ContentService.getOriginalContentHtml().body.innerHTML;
+    }
+    if (components.length <= 0) {
+      throw new Error('No components found');
+    }
+    return components;
   }
 
   getEditor() {

@@ -9,7 +9,6 @@ import 'grapesjs/dist/css/grapes.min.css';
 import 'grapesjs-preset-newsletter/dist/grapesjs-preset-newsletter.css';
 import './grapesjs-custom.css';
 import ContentService from 'grapesjs-preset-mautic/dist/content.service';
-import MjmlService from 'grapesjs-preset-mautic/dist/mjml/mjml.service';
 
 /**
  * Launch builder
@@ -24,8 +23,8 @@ function launchBuilderGrapesjs(formName) {
   // Prepare HTML
   mQuery('html').css('font-size', '100%');
   mQuery('body').css('overflow-y', 'hidden');
-  mQuery('.builder-panel').css('padding', 0);
-  mQuery('.builder-panel').css('display', 'block');
+  mQuery(`.${BuilderService.CONTAINER_CLASS}`).css('padding', 0);
+  mQuery(`.${BuilderService.CONTAINER_CLASS}`).css('display', 'block');
   mQuery('.builder').addClass('builder-active').removeClass('hide');
 
   // disable mautic global shortcuts
@@ -38,33 +37,17 @@ function launchBuilderGrapesjs(formName) {
 
   // Initialize GrapesJS and make it available in the Mautic scope
   // so it can be accessed by 3rd party plugins as requested
-  // by the community. Should not be used from the Mautic project.
-  builderService.initGrapesJS(formName);
-  // Mautic.builder = builderService.initGrapesJS(formName);
+  // by the community. Should only be used in rare cases.
+  Mautic.builder = builderService.initGrapesJS(formName);
 
   // const contentService = new ContentService();
-  // const isMjmlMode = ContentService.isMjmlMode(Mautic.builder);
-  // const components = getComponents(isMjmlMode);
-  // Mautic.builder.setComponents(components);
-  
+  const isMjmlMode = ContentService.isMjmlMode(Mautic.builder);
+  const components = builderService.getComponents(isMjmlMode);
+  Mautic.builder.setComponents(components);
+
   Mautic.showChangeThemeWarning = true;
-}
 
-function getComponents(isMjmlMode) {
-  let components = '';
-
-  if (isMjmlMode) {
-    components = MjmlService.getOriginalContentMjml();
-    // validate
-    MjmlService.mjmlToHtml(components);
-  } else {
-    //html page and email html
-    components = ContentService.getOriginalContentHtml().body.innerHTML;
-  }
-  if (components.length <= 0) {
-    throw new Error('No components found');
-  }
-  return components;
+  return Mautic.builder;
 }
 
 /**
