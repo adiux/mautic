@@ -502,7 +502,7 @@ class AssetsHelper
 
     private function getCKEditorScripts(): array
     {
-        $base    = 'app/bundles/CoreBundle/Assets/js/libraries/ckeditor/';
+        $base    = 'node_modules/ckeditor4/';
 
         return [
             $base.'ckeditor.js?v'.$this->version,
