@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "Mautic Open Source Distribution",
   "devDependencies": {
+    "@symfony/stimulus-bridge": "^3.2.1",
+    "@symfony/webpack-encore": "^4.2.0",
+    "core-js": "^3.28.0",
     "grunt": "^1.6.1",
     "grunt-autoprefixer": "^3.0.4",
     "grunt-contrib-copy": "^1.0.0",
@@ -10,9 +13,17 @@
     "grunt-contrib-less": "^3.0.0",
     "grunt-contrib-watch": "^1.1.0",
     "load-grunt-tasks": "^5.1.0",
-    "time-grunt": "^2.0.0"
+    "regenerator-runtime": "^0.13.11",
+    "time-grunt": "^2.0.0",
+    "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
     "ckeditor4": "^4.20.2"
+  },
+  "scripts": {
+    "dev-server": "encore dev-server",
+    "dev": "encore dev",
+    "watch": "encore dev --watch",
+    "build": "encore production --progress"
   }
 }
