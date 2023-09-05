@@ -99,7 +99,16 @@ class TokenHelper
                 case 'datetime':
                 case 'date':
                 case 'time':
-                    $dt   = new DateTimeHelper($value);
+                    // convert from system to contact's timezone
+                    $systemTimezone = self::getParameter('default_timezone') ?? 'UTC';
+                    $contactTimzone = $lead['timezone'] ?? 'UTC';
+
+                    $dt       = new DateTimeHelper($value, DateTimeHelper::FORMAT_DB, $systemTimezone);
+                    $dateTime = $dt->getDateTime();
+                    $dateTime->setTimezone(new \DateTimeZone($contactTimzone));
+                    $dt->setDateTime($dateTime);
+
+                    // format the date/time
                     $date = $dt->getDateTime()->format(
                         self::getParameter('date_format_dateonly')
                     );
