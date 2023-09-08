@@ -101,9 +101,13 @@ class TokenHelper
                 case 'time':
                     // convert from system to contact's timezone
                     $systemTimezone = self::getParameter('default_timezone') ?? 'UTC';
-                    $contactTimzone = $lead['timezone'] ?? 'UTC';
+                    $contactTimzone = $systemTimezone;
+                    // use the system timezone if the contact's timezone is not set or it is a test segment email
+                    if (!empty($lead['timezone']) && '[Preferred Timezone]' !== $lead['timezone']) {
+                        $contactTimzone = $lead['timezone'];
+                    }
 
-                    $dt       = new DateTimeHelper($value, DateTimeHelper::FORMAT_DB, $systemTimezone);
+                    $dt       = new DateTimeHelper($value, 'Y-m-d H:i:s', $systemTimezone);
                     $dateTime = $dt->getDateTime();
                     $dateTime->setTimezone(new \DateTimeZone($contactTimzone));
                     $dt->setDateTime($dateTime);
