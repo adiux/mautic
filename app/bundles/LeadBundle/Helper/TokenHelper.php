@@ -98,7 +98,7 @@ class TokenHelper
                 case 'time':
                     // convert from system to contact's timezone
                     $systemTimezone = self::getParameter('default_timezone') ?? 'UTC';
-                    $contactTimzone = $lead['timezone'] ?? 'UTC';
+                    $contactTimzone = $lead['timezone'] ?? $systemTimezone;
 
                     $dt       = new DateTimeHelper($value, DateTimeHelper::FORMAT_DB, $systemTimezone);
                     $dateTime = $dt->getDateTime();
