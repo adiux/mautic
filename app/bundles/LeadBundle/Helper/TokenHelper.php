@@ -99,15 +99,14 @@ class TokenHelper
                 case 'datetime':
                 case 'date':
                 case 'time':
-                    // convert from system to contact's timezone
-                    $systemTimezone = self::getParameter('default_timezone') ?? 'UTC';
-                    $contactTimzone = $systemTimezone;
-                    // use the system timezone if the contact's timezone is not set or it is a test segment email
+                    // convert from DB/UTC to contact's timezone if set.
+                    // Otherwise use the system timezone or UTC as fallback.
+                    $contactTimzone = self::getParameter('default_timezone') ?? 'UTC';
                     if (!empty($lead['timezone']) && '[Preferred Timezone]' !== $lead['timezone']) {
                         $contactTimzone = $lead['timezone'];
                     }
 
-                    $dt       = new DateTimeHelper($value, 'Y-m-d H:i:s', $systemTimezone);
+                    $dt       = new DateTimeHelper($value);
                     $dateTime = $dt->getDateTime();
                     $dateTime->setTimezone(new \DateTimeZone($contactTimzone));
                     $dt->setDateTime($dateTime);
@@ -119,6 +118,7 @@ class TokenHelper
                     $time = $dt->getDateTime()->format(
                         self::getParameter('date_format_timeonly')
                     );
+
                     switch ($defaultValue) {
                         case 'datetime':
                             $value = $date.' '.$time;
