@@ -393,3 +393,7 @@ $container->loadFromExtension('fm_elfinder', [
         ],
     ],
 ]);
+
+$container->loadFromExtension('webpack_encore', [
+    'output_path'  => '%env(resolve:MAUTIC_ENCORE_OUTPUT_PATH)%',
+]);

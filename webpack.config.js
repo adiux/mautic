@@ -1,69 +1,33 @@
-/**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
- */
+// webpack.config.js
+const Encore = require('@symfony/webpack-encore');
 
-'use strict';
+Encore
+    // Directory where compiled assets will be stored
+    .setOutputPath('media/build/')
+    // Public path used by the web server to access the output path
+    .setPublicPath('/media/build')
 
-/* eslint-env node */
-const path = require( 'path' );
-const glob = require("glob")
-const fs = require( 'fs' );
-const { loaders } = require( '@ckeditor/ckeditor5-dev-utils' );
-const { CKEditorTranslationsPlugin } = require( '@ckeditor/ckeditor5-dev-translations' );
+    // Enable source maps for development
+    .enableSourceMaps(!Encore.isProduction())
 
-// Find the webroot path if it is not the same folder as the current dir.
-// This is the case for Composer based installations following the best practices.
-let webroot = '';
-if (!fs.existsSync('app/release_metadata.json')) {
-	let files = glob.sync("**/app/release_metadata.json");
-	webroot = path.dirname(path.dirname(files[0])) + '/';
-}
+    // Clean output directory before building
+    .cleanupOutputBeforeBuild()
 
-module.exports = {
-	devtool: 'source-map',
-	performance: { hints: false },
-	cache: {
-		type: 'filesystem',
-		cacheDirectory: path.resolve(__dirname, 'var/cache/js/webpack'),
-	},
+    // Enable hashed filenames (e.g. app.abc123.css) for cache busting
+    // .enableVersioning(Encore.isProduction())
+	.enableSingleRuntimeChunk()
+	.splitEntryChunks()
 
-	entry: path.resolve( __dirname, webroot + 'app/assets/libraries/ckeditor/src', 'ckeditor.ts' ),
+    // Enable support for TypeScript (optional)
+    .enableTypeScriptLoader()
+    // Main JS entry point
+    .addEntry('ckeditor', './app/assets/libraries/ckeditor/src/ckeditor.ts')
+	// entry: path.resolve( __dirname, webroot + 'app/assets/libraries/ckeditor/src', 'ckeditor.ts' ),
 
-	output: {
-		// The name under which the editor will be exported.
-		library: 'ClassicEditor',
+    // Main CSS entry point
+    // .addStyleEntry('styles', './assets/css/app.css')
+    // Enable Sass/SCSS support (optional)
+    // .enableSassLoader()
+;
 
-		path: path.resolve( __dirname, webroot + 'media/libraries/ckeditor' ),
-		filename: 'ckeditor.js',
-		libraryTarget: 'umd',
-		libraryExport: 'default'
-	},
-
-	plugins: [
-		new CKEditorTranslationsPlugin( {
-			language: 'en',
-			additionalLanguages: 'all'
-		} )
-	],
-
-	module: {
-		rules: [
-			loaders.getIconsLoader( { matchExtensionOnly: true } ),
-			loaders.getStylesLoader( {
-				themePath: require.resolve( '@ckeditor/ckeditor5-theme-lark' ),
-				minify: true
-			} ),
-			loaders.getTypeScriptLoader()
-		]
-	},
-
-	resolve: {
-		extensions: [ '.ts', '.js', '.json' ]
-	},
-	optimization: {
-		removeAvailableModules: false,
-		removeEmptyChunks: false,
-		splitChunks: false,
-	}
-};
+module.exports = Encore.getWebpackConfig();

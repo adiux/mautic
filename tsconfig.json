@@ -20,5 +20,6 @@
     "skipLibCheck": true
   },
   "include": [
+    "app/assets/libraries/**/*.ts" 
   ]
 }
